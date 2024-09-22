@@ -1,6 +1,6 @@
 #!/bin/bash
 
 
-git clone https://github.com/sriramulasrinath/ansible-project.git
+https://github.com/sriramulasrinath/Project.git
 
 dnf install ansible -y 
