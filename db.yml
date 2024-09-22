@@ -1,0 +1,56 @@
+---
+- name: Automate SQL Server Installation
+  hosts: all
+  become: yes
+  vars:
+    sql_package_path: "/path/to/your/sqlserver-package.rpm"
+    username: "your_sql_user"  # replace with actual username
+    password: "your_sql_password"  # replace with actual password
+
+  tasks:
+    - name: Check if SQL Server is already installed
+      ansible.builtin.shell: |
+        rpm -q mssql-server
+      register: sql_server_installed
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install SQL Server package if not already installed
+      ansible.builtin.package:
+        name: "{{ sql_package_path }}"
+        state: present
+      when: sql_server_installed.rc != 0
+      notify: Restart SQL Server
+
+    - name: Ensure SQL Server service is started and enabled
+      ansible.builtin.systemd:
+        name: mssql-server
+        enabled: yes
+        state: started
+
+    - name: Check if SQL Server configuration is already done
+      ansible.builtin.stat:
+        path: /var/opt/mssql/data/master.mdf
+      register: sql_configured
+
+    - name: Configure SQL Server if not already configured
+      ansible.builtin.shell: |
+        /opt/mssql/bin/mssql-conf setup accept-eula
+      when: not sql_configured.stat.exists
+      notify: Restart SQL Server
+
+    - name: Test SQL Server connection
+      ansible.builtin.shell: |
+        sqlcmd -S localhost -U {{ username }} -P '{{ password }}' -Q "SELECT @@VERSION"
+      register: sql_test
+      changed_when: false
+
+    - name: Display SQL Server version
+      ansible.builtin.debug:
+        msg: "{{ sql_test.stdout }}"
+
+  handlers:
+    - name: Restart SQL Server
+      ansible.builtin.systemd:
+        name: mssql-server
+        state: restarted

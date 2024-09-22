@@ -1,0 +1,28 @@
+- name: Deploy Nginx and Monitor Resources
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Display the connected host
+      ansible.builtin.debug:
+        msg: "Connecting to host: {{ inventory_hostname }} (Hostname: {{ ansible_hostname }})"
+
+    - name: Gather system usage in one command
+      ansible.builtin.shell: |
+        echo "Hostname: $(hostname)"
+        echo "CPU Usage: $(top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}')%"
+        echo "RAM Total: $(free -m | awk 'NR==2{print $2}') MB"
+        echo "RAM Used: $(free -m | awk 'NR==2{print $3}') MB"
+        echo "RAM Free: $(free -m | awk 'NR==2{print $4}') MB"
+        echo "Disk Usage: $(df -h | awk '$NF=="/"{print $5}')"
+      register: system_usage
+      changed_when: false
+
+    - name: Print system usage line by line
+      ansible.builtin.debug:
+        msg: "{{ item }}"
+      loop: "{{ system_usage.stdout.splitlines() }}"

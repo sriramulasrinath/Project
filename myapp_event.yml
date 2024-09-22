@@ -1,0 +1,31 @@
+---
+- name: Pass HTML content via template
+  hosts: localhost
+  become: yes
+  vars:
+    title: "Welcome to My Nginx Page"
+    message: "Hi this is srinath"
+
+  tasks:
+    - name: Install Nginx
+      package:
+        name: nginx
+        state: present
+      notify: restart nginx
+
+    - name: Remove the default Nginx index.html file
+      file:
+        path: /usr/share/nginx/html
+        state: absent
+
+    - name: Deploy custom HTML from template
+      template:
+        src: index.html.j2
+        dest: /usr/share/nginx/index.html.j2
+      notify: restart nginx
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted

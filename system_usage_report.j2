@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Usage Report</title>
+</head>
+<body>
+    <h1>System Usage Report</h1>
+    <p><strong>CPU Usage:</strong> {{ cpu_usage.stdout }}%</p>
+    <p><strong>TOTAL_RAM:</strong> {{ TOTAL_RAM.stdout }}MB</p>
+    <p><strong>Free RAM:</strong> {{ FREE_RAM.stdout }}MB</p>
+    <p><strong>Used RAM:</strong> {{ USED_RAM.stdout }}MB</p>
+    <p><strong>Disk Usage:</strong> {{ disk_usage.stdout }}</p>
+    <hr/>
+    <p>Generated on: {{ ansible_date_time.date }} {{ ansible_date_time.time }}</p>
+</body>
+</html>

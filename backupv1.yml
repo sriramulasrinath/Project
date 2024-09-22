@@ -1,0 +1,69 @@
+---
+- name: Backup and Networker Setup on Linux Servers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure tar file is present
+      ansible.builtin.stat:
+        path: /home/ansible/tmp/nw199_linux_x86_64.tar.gz
+      register: tar_file
+
+    - name: Extract tar file if present
+      ansible.builtin.unarchive:
+        src: /home/ansible/tmp/nw199_linux_x86_64.tar.gz
+        dest: /home/ansible/tmp
+        remote_src: yes
+      when: tar_file.stat.exists
+
+    - name: Copy Networker client RPM to the target node
+      ansible.builtin.copy:
+        src: /home/ansible/opt/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        dest: /tmp/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        mode: '0644'
+
+    - name: Install Networker client RPM
+      ansible.builtin.yum:
+        name: /tmp/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        state: present
+        disable_gpg_check: yes
+
+    - name: Check the status of Networker service
+      ansible.builtin.systemd:
+        name: networker.service
+        state: started
+        enabled: yes
+
+    - name: Open ports 7937/tcp and 7938/tcp using iptables
+      ansible.builtin.shell: |
+        iptables -A INPUT -p tcp --dport 7937 -j ACCEPT
+        iptables -A INPUT -p tcp --dport 7938 -j ACCEPT
+
+    - name: Save iptables rules
+      ansible.builtin.shell: service iptables save
+
+    - name: List open ports to verify
+      ansible.builtin.shell: iptables -L -n -v | grep '7937\|7938'
+      register: iptables_check
+
+    - name: Display iptables check result
+      ansible.builtin.debug:
+        msg: "{{ iptables_check.stdout }}"
+
+    - name: Add the required ports to nsrports
+      ansible.builtin.shell: nsrports -t ukchnwpsslbkp-p 7937 7938
+
+    - name: Check port 7937 connection
+      ansible.builtin.shell: netstat -an | grep 7937
+      register: port_check_7937
+
+    - name: Display port 7937 check result
+      ansible.builtin.debug:
+        msg: "{{ port_check_7937.stdout }}"
+
+    - name: Check port 7938 connection
+      ansible.builtin.shell: netstat -an | grep 7938
+      register: port_check_7938
+
+    - name: Display port 7938 check result
+      ansible.builtin.debug:
+        msg: "{{ port_check_7938.stdout }}"

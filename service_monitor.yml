@@ -1,0 +1,23 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Detect MySQL or MariaDB service name
+      shell: "systemctl list-units --type=service | grep -E 'mysql|mysqld' | awk '{print $1}'"
+      register: mysql_service
+      changed_when: false
+
+    - name: Fail if MySQL service is not installed
+      fail:
+        msg: "MySQL service is not installed on this host."
+      when: mysql_service.stdout == ""
+
+    - name: Check if MySQL is running
+      shell: "systemctl is-active {{ mysql_service.stdout }}"
+      register: mysql_status
+      ignore_errors: yes
+
+    - name: Restart MySQL if not running
+      ansible.builtin.systemd:
+        name: "{{ mysql_service.stdout }}"
+        state: restarted
+      when: mysql_status.stdout != "active"

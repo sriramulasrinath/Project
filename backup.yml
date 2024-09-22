@@ -1,0 +1,68 @@
+---
+- name: Backup and Networker Setup on Linux Servers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure tar file is present
+      ansible.builtin.stat:
+        path: /home/ansible/tmp/nw199_linux_x86_64.tar.gz
+      register: tar_file
+
+    - name: Extract tar file if present
+      ansible.builtin.unarchive:
+        src: /home/ansible/tmp/nw199_linux_x86_64.tar.gz
+        dest: /home/ansible/tmp
+        remote_src: yes
+      when: tar_file.stat.exists
+
+    - name: Install Networker client RPM
+      ansible.builtin.yum:
+        name: /home/ansible/opt/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        state: present
+        disable_gpg_check: yes
+
+    - name: Check the status of Networker service
+      ansible.builtin.systemd:
+        name: networker.service
+        state: started
+        enabled: yes
+
+    - name: Ensure the firewall service is started and enabled
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+        
+    - name: Open ports 7937/tcp and 7938/tcp in the firewall
+      ansible.builtin.firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - 7937/tcp
+        - 7938/tcp
+
+    - name: Reload the firewall to apply changes
+      ansible.builtin.shell: firewall-cmd --reload
+
+    - name: List open ports to verify
+      ansible.builtin.shell: firewall-cmd --list-ports
+      register: firewall_ports
+
+    - name: Ensure /etc/hosts has the correct entry
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }}"
+        state: present
+
+    - name: Add the required port to nsrports
+      ansible.builtin.shell: nsrports -t {{ inventory_hostname }} 7937
+
+    - name: Check port connection (replace with actual test command)
+      ansible.builtin.shell: netstat -an | grep 7937
+      register: port_check
+
+    - name: Display port check result
+      ansible.builtin.debug:
+        msg: "{{ port_check.stdout }}"

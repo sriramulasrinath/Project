@@ -1,0 +1,26 @@
+---
+- name: Playbook for Event Trigger (Directory and File Creation)
+  hosts: localhost
+  gather_facts: yes  
+  tasks:
+    - name: Check if the directory exists
+      stat:
+        path: /tmp/test_event
+      register: dir_stat
+
+    - name: Create the directory if it does not exist
+      file:
+        path: /tmp/test_event
+        state: directory
+      when: not dir_stat.stat.exists
+
+    - name: Create a test event log file
+      copy:
+        dest: /tmp/test_event/event.log
+        content: "Event triggered on {{ ansible_date_time.date }} {{ ansible_date_time.time }}\n"
+      when: not dir_stat.stat.exists
+
+    - name: Display a message if the event was triggered
+      debug:
+        msg: "Directory /tmp/test_event created, and event.log file added."
+      when: not dir_stat.stat.exists

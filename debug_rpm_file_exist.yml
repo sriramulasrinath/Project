@@ -1,0 +1,32 @@
+---
+- name: Backup and Networker Setup on Linux Servers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if the Networker RPM file exists
+      ansible.builtin.stat:
+        path: /home/ansible/opt/lgtoclnt-19.9.0.0-1.x86_64.rpm
+      register: rpm_file
+
+    - name: Debug the file path
+      ansible.builtin.debug:
+        msg: "File found: {{ rpm_file.stat.exists }}"
+
+    - name: Fail if RPM file does not exist
+      ansible.builtin.fail:
+        msg: "The RPM file was not found at /home/ansible/opt/lgtoclnt-19.9.0.0-1.x86_64.rpm"
+      when: not rpm_file.stat.exists
+
+    - name: Copy Networker client RPM to the target node
+      ansible.builtin.copy:
+        src: /home/ansible/opt/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        dest: /tmp/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        mode: '0644'
+      when: rpm_file.stat.exists
+
+    - name: Install Networker client RPM
+      ansible.builtin.yum:
+        name: /tmp/lgtoclnt-19.9.0.0-1.x86_64.rpm
+        state: present
+        disable_gpg_check: yes
+  

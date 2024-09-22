@@ -1,0 +1,58 @@
+---
+- name: Install Nginx and Monitor CPU Usage
+  hosts: all
+  become: yes  # Run as sudo if needed
+  vars:
+    cpu_threshold: 50  # Set CPU usage threshold (percentage)
+    check_interval: 10  # Interval in seconds to check the CPU usage
+    max_checks: 10  # Maximum number of checks before stopping
+
+  tasks:
+    - name: Install and Start Nginx
+      package:
+        name: nginx
+        state: present
+      notify: Start and enable Nginx service
+
+    - name: Start a background process (CPU intensive for testing)
+      shell: "nohup yes > /dev/null & echo $! > /tmp/test_process.pid"
+      async: 0  # Start the task asynchronously
+      poll: 0   # Don't wait for the task to complete
+      register: start_process
+
+    - name: Wait for a few seconds before monitoring
+      wait_for:
+        timeout: 5
+
+    - name: Get the PID of the started process
+      command: cat /tmp/test_process.pid
+      register: process_pid
+
+    - name: Monitor CPU usage and kill the process if it exceeds threshold
+      shell: |
+        for i in $(seq 1 {{ max_checks }}); do
+          cpu_usage=$(ps -p {{ process_pid.stdout }} -o %cpu= | awk '{print int($1)}')
+          echo "Current CPU usage: $cpu_usage%"
+          if [ $cpu_usage -gt {{ cpu_threshold }} ]; then
+            kill -9 {{ process_pid.stdout }}
+            echo "Process {{ process_pid.stdout }} killed due to high CPU usage."
+            break
+          fi
+          sleep {{ check_interval }}
+        done
+      register: monitor_output
+
+    - name: Ensure the process is killed
+      shell: "ps -p {{ process_pid.stdout }} || echo 'Process not running'"
+      register: process_status
+
+    - name: Display process status
+      debug:
+        msg: "{{ process_status.stdout }}"
+
+  handlers:
+    - name: Start and enable Nginx service
+      service:
+        name: nginx
+        state: started
+        enabled: yes
