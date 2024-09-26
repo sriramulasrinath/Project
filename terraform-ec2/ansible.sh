@@ -1,17 +1,10 @@
 #!/bin/bash
-env > /tmp/env_info.log
-TIMESTAMP=$(date +%F-%H-%M-%S)
-SCRIPT_NAME=$(echo $0 | cut -d "." -f1)
-LOGFILE=/tmp/$SCRIPT_NAME-$TIMESTAMP.log
-git clone https://github.com/sriramulasrinath/Project.git &>>$LOGFILE
+yum install -y yum-utils
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+systemctl start docker
+systemctl enable docker
+usermod -aG docker ec2-user
+
+git clone https://github.com/sriramulasrinath/Project.git 
 dnf install ansible -y 
-
-
-
-
-# Clone the repository and log output
-if git clone https://github.com/sriramulasrinath/Project.git >> $LOGFILE 2>&1; then
-    echo "Git clone succeeded." >> $LOGFILE
-else
-    echo "Git clone failed." >> $LOGFILE
-fi
