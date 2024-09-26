@@ -4,8 +4,7 @@ FROM python:3.10-slim
 # Set the working directory
 WORKDIR /app
 
-# Copy requirements file (if you have one)
-COPY requirements.txt .
+
 
 # Install required packages
 RUN pip install --no-cache-dir pywinrm
